@@ -1,577 +1,153 @@
-AAAAA<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>FNAF — Doors & Lights Buttons (Full Prototype)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FNAF Office Full Game</title>
 <style>
-  :root{
-    --bg1:#0d0f12; --bg2:#141519;
-    --accent:#23ff6b; --danger:#ff6161;
-    --hud: rgba(0,0,0,0.55);
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:#ddd;background:linear-gradient(180deg,var(--bg1),var(--bg2));}
-  #game{display:flex;align-items:center;justify-content:center;height:100vh;padding:20px;}
+/* ---------- Global ---------- */
+body, html { margin:0; padding:0; overflow:hidden; font-family: monospace; background:#000; color:#fff; }
+button { cursor:pointer; }
 
-  /* Stage / Office */
-  .stage{
-    width:1100px;height:650px;border-radius:12px;position:relative;overflow:hidden;
-    background:linear-gradient(180deg,#111118 0%, #0b0b0f 100%); box-shadow:0 30px 80px rgba(0,0,0,0.6);
-  }
-  .wall{position:absolute;left:0;right:0;top:0;height:360px;background:linear-gradient(180deg,#1a1d22 0%, #0f1012 100%);z-index:1}
-  .floor{position:absolute;left:0;right:0;bottom:0;height:290px;background:linear-gradient(180deg,#0b0b0e 0%, #000 100%);z-index:1}
+/* ---------- Start Menu ---------- */
+#fnaf-menu { position: fixed; inset:0; display:flex; justify-content:center; align-items:center; z-index:1000; background:#000; overflow:hidden; }
+.menu-bg { position:absolute; inset:0; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 2px, transparent 2px, transparent 4px); animation: staticFlicker 0.08s infinite; }
+@keyframes staticFlicker {0%{opacity:0.04;}50%{opacity:0.1;}100%{opacity:0.04;}}
+.menu-content { position: relative; text-align:center; z-index:10; }
+.title { font-size:60px; color:#ff6161; text-shadow:0 0 6px #ff6161,0 0 12px #ff6161,0 0 18px #ff0000; animation: flickerTitle 1.5s infinite; margin-bottom:40px; }
+@keyframes flickerTitle {0%,19%,21%,23%,25%,54%,56%,100%{opacity:1;}20%,22%,24%,55%{opacity:0.3;}}
+.buttons { display:flex; flex-direction:column; gap:18px; }
+.btn { padding:12px 28px; font-size:22px; border:2px solid #ff6161; border-radius:10px; background: rgba(0,0,0,0.6); color:#fff; text-shadow:0 0 4px #ff6161; transition: all 0.2s; }
+.btn:hover { color:#ff6161; box-shadow:0 0 14px #ff6161,0 0 28px rgba(255,100,100,0.3); transform:scale(1.05); }
 
-  /* Desk & monitors */
-  .desk{position:absolute;left:50%;transform:translateX(-50%);bottom:48px;width:680px;height:180px;border-radius:10px;background:linear-gradient(180deg,#2c2f33,#171719);z-index:30;box-shadow:0 30px 60px rgba(0,0,0,0.6)}
-  .monitor{position:absolute;width:160px;height:110px;top:-118px;background:#000;border-radius:8px;box-shadow:0 12px 30px rgba(0,255,120,0.04), inset 0 0 12px rgba(0,255,120,0.02);left:46px;border:3px solid rgba(255,255,255,0.02)}
-  .monitor.right{left:470px}
+/* ---------- Game Area ---------- */
+#game { display:none; position:relative; width:100vw; height:100vh; background: linear-gradient(to bottom,#111,#000); overflow:hidden; }
+#office { position:absolute; inset:0; background: linear-gradient(to bottom,#222,#111); box-shadow: inset 0 0 60px rgba(0,0,0,0.7); }
 
-  /* HUD */
-  .hud{position:absolute;left:18px;top:14px;z-index:80;display:flex;gap:12px;align-items:center}
-  .clock{background:var(--hud);padding:8px 12px;border-radius:8px;color:var(--accent);font-weight:700}
-  .power{width:320px;height:22px;background:rgba(255,255,255,0.03);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
-  .power .inner{height:100%;width:100%;background:linear-gradient(90deg,#39ff8a,#0bd6a3);transition:width .25s}
+/* Cameras */
+.camera-feed { position:absolute; width:150px; height:100px; border:2px solid #fff; background: repeating-linear-gradient(45deg,#222,#222 4px,#111 4px,#111 8px); box-shadow:0 0 12px rgba(255,255,255,0.5); cursor:pointer; }
 
-  .controls{position:absolute;right:18px;top:14px;z-index:80;display:flex;gap:8px}
-  .btn{background:var(--hud);padding:8px 12px;border-radius:8px;color:#cfe;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
-  .btn.small{padding:6px 8px;font-size:13px}
+/* Animatronics */
+.animatronic { position:absolute; width:80px; height:120px; border-radius:10px; box-shadow:0 0 12px rgba(255,0,0,0.7); animation: sway 2s infinite alternate; display:none; }
+@keyframes sway {0%{transform:rotate(-3deg);}50%{transform:rotate(3deg);}100%{transform:rotate(-3deg);}}
 
-  /* camera preview */
-  #camera-preview{position:absolute;right:20px;top:60px;width:240px;height:160px;border-radius:8px;background:#000;border:2px solid rgba(255,255,255,0.06);overflow:hidden;z-index:70;cursor:pointer}
-  #camera-preview .cam-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#0f0;font-weight:700;font-size:14px}
+/* Doors & Lights */
+.door-btn, .light-btn { position:absolute; bottom:20px; padding:10px 16px; background: rgba(255,255,255,0.1); border:1px solid #fff; color:white; text-shadow:0 0 4px #fff; }
+#door-left{left:20px;} #door-right{right:20px;} #light-left{left:20px; bottom:60px;} #light-right{right:20px; bottom:60px;}
 
-  /* doors (visuals) */
-  .door.left,.door.right{position:absolute;top:48px;width:82px;height:260px;background:#0b0b0d;border:2px solid rgba(255,255,255,0.04);border-radius:6px;z-index:40;display:flex;align-items:flex-start;justify-content:center}
-  .door.left{left:28px}
-  .door.right{right:28px}
-  .door .led{width:12px;height:12px;border-radius:50%;margin-top:10px;background:#4b4b4b;box-shadow:0 0 6px rgba(0,0,0,0.6)}
-  .door.closed{background:linear-gradient(180deg,#050607,#0a0a0b);transform:translateY(0);box-shadow:inset 0 10px 40px rgba(0,0,0,0.6)}
-  .door.open{background:linear-gradient(180deg,#1a1c1f,#0f1012);transform:translateY(0)}
-
-  /* door sliding panel (actual visual sliding) */
-  .door-panel{
-    position:absolute;top:-260px;left:0;right:0;height:260px;background:linear-gradient(180deg,#0b0b0b,#060606);border-bottom:6px solid rgba(255,255,255,0.02);transition:top .28s cubic-bezier(.2,.9,.2,1);z-index:45;border-radius:4px;
-  }
-  .door-panel.down{top:48px} /* moved down to cover opening */
-
-  /* light buttons (visual) */
-  .light-btn{position:absolute;top:12px;width:44px;height:44px;border-radius:50%;background:#2c2c2c;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:40}
-  .light-btn.left{left:160px}
-  .light-btn.right{right:160px}
-  .light-btn.on{box-shadow:0 0 18px rgba(255,240,120,0.18);background:linear-gradient(180deg,#fff7c9,#fff0a2)}
-
-  /* control panels with buttons for doors/lights */
-  .panel-left, .panel-right { position:absolute; bottom:18px; width:220px; display:flex; flex-direction:column; gap:8px; z-index:90; }
-  .panel-left{ left:28px; align-items:flex-start }
-  .panel-right{ right:28px; align-items:flex-end }
-
-  .control-button { background: linear-gradient(180deg,#111,#0b0b0d); border:1px solid rgba(255,255,255,0.04); padding:8px 12px; border-radius:8px; color:#bff; font-weight:700; cursor:pointer; width:120px; text-align:center}
-  .control-button.secondary { background:linear-gradient(180deg,#0e0e11,#16161a); color:#ffd; width:88px }
-
-  /* camera UI modal */
-  #camera-ui{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:680px;height:420px;background:#000;border-radius:10px;z-index:120;display:none;box-shadow:0 30px 80px rgba(0,0,0,0.8)}
-  #camera-view{position:relative;inset:0;width:100%;height:100%;overflow:hidden;border-radius:10px}
-  .cam-room{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .35s, transform .35s;filter:contrast(.95);display:flex;align-items:center;justify-content:center}
-  .cam-overlay-static{position:absolute;inset:0;background-image:linear-gradient(transparent 48%, rgba(255,255,255,0.02) 50%, transparent 52%);opacity:.12;mix-blend-mode:screen;pointer-events:none}
-  .cam-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%);pointer-events:none}
-  .cam-label{position:absolute;left:12px;bottom:12px;color:#0f0;text-shadow:0 0 8px rgba(16,255,112,0.06);font-weight:700;z-index:10}
-  .cam-scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.03) 1px);opacity:.12;pointer-events:none}
-  .cam-static-noise{position:absolute;inset:0;background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="1" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.04" /></svg>');opacity:.06;pointer-events:none}
-  .cam-buttons{position:absolute;right:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;z-index:30}
-  .cam-buttons button{background:rgba(0,0,0,0.6);color:#9f9;padding:6px 8px;border-radius:6px;border:1px solid rgba(0,255,150,0.06);cursor:pointer;font-weight:700}
-
-  .cam-bot{position:absolute;width:64px;height:96px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,0.6);transform:translate(-50%,-50%)}
-  .cam-bot.red{background:linear-gradient(180deg,#ff6b6b,#8a1b1b);color:#fff}
-  .cam-bot.blue{background:linear-gradient(180deg,#6fb3ff,#0a3b6f);color:#fff}
-  .cam-bot.green{background:linear-gradient(180deg,#7bffb0,#0f6f3a);color:#fff}
-
-  /* bot stage placeholders */
-  .bot-stage{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);width:120px;height:200px;border-radius:12px;z-index:35;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0.95}
-  .bot-stage.red{background:linear-gradient(180deg,#a00,#500);box-shadow:0 30px 60px rgba(160,40,40,0.12);left:30%}
-  .bot-stage.blue{background:linear-gradient(180deg,#0066cc,#00304d);box-shadow:0 30px 60px rgba(0,90,160,0.12);left:50%}
-  .bot-stage.green{background:linear-gradient(180deg,#0a8f5a,#063a27);box-shadow:0 30px 60px rgba(10,130,90,0.12);left:70%}
-
-  /* jumpscare */
-  #jumpscare{position:absolute;inset:0;background:#fff;display:none;align-items:center;justify-content:center;font-size:96px;font-weight:900;z-index:300;color:#000;transition:opacity .12s}
-
-  /* tutorial & phone UI */
-  #overlay{position:absolute;inset:0;z-index:200;display:flex;align-items:center;justify-content:center}
-  #tutorial{width:760px;background:rgba(0,0,0,0.84);padding:28px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);color:#cfe;text-align:center}
-  #tutorial h2{color:var(--accent);margin-bottom:12px}
-  #phone-guy{position:absolute;left:50%;transform:translateX(-50%);bottom:220px;background:rgba(0,0,0,0.78);padding:12px 16px;border-radius:10px;border:1px solid rgba(0,255,120,0.06);color:#bff;display:none;z-index:250;min-width:360px;text-align:center;font-weight:700}
-
-  @media (max-width:1200px){.stage{transform:scale(.9)}}
-  @media (max-width:980px){.stage{transform:scale(.75)}}
+/* Power & Clock */
+#power-bar { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:200px; height:20px; border:2px solid #fff; background:#222;}
+#power-fill { width:100%; height:100%; background:linear-gradient(to right,#0f0,#0a0);}
+#clock { position:absolute; top:10px; right:20px; font-size:24px; text-shadow:0 0 6px #fff;}
 </style>
 </head>
 <body>
-<div id="game">
-  <div class="stage" id="stage">
 
-    <div class="wall"></div>
-    <div class="floor"></div>
-
-    <!-- Doors (visual panels that slide down) -->
-    <div class="door left" id="door-left"><div class="led" id="led-left"></div></div>
-    <div class="door right" id="door-right"><div class="led" id="led-right"></div></div>
-    <div class="door-panel" id="door-panel-left"></div>
-    <div class="door-panel" id="door-panel-right"></div>
-
-    <!-- Light buttons (spotlight visuals) -->
-    <div class="light-btn left" id="light-left"></div>
-    <div class="light-btn right" id="light-right"></div>
-
-    <!-- desk & monitors -->
-    <div class="desk"></div>
-    <div class="monitor"></div>
-    <div class="monitor right"></div>
-
-    <!-- HUD -->
-    <div class="hud">
-      <div class="clock" id="clock">12:00 AM</div>
-      <div class="power"><div class="inner" id="power-inner"></div></div>
+<!-- Start Menu -->
+<div id="fnaf-menu">
+  <div class="menu-bg"></div>
+  <div class="menu-content">
+    <h1 class="title">Five Nights at the Office</h1>
+    <div class="buttons">
+      <button class="btn" id="start-night">Start Night</button>
+      <button class="btn" id="tutorial-btn">Tutorial</button>
     </div>
-
-    <div class="controls">
-      <div class="btn small" id="camera-open">Open Cameras</div>
-      <div class="btn small" id="toggle-mute">Mute</div>
-      <div class="btn small" id="phone-replay">Phone Replay</div>
-    </div>
-
-    <!-- Camera preview -->
-    <div id="camera-preview" title="Click to open cameras">
-      <div class="cam-bg" id="preview-bg">CAM 1 — STAGE</div>
-    </div>
-
-    <!-- Panels with explicit door/light buttons -->
-    <div class="panel-left">
-      <div class="control-button" id="left-door-btn">Left Door</div>
-      <div class="control-button secondary" id="left-light-btn">Left Light</div>
-    </div>
-    <div class="panel-right">
-      <div class="control-button" id="right-door-btn">Right Door</div>
-      <div class="control-button secondary" id="right-light-btn">Right Light</div>
-    </div>
-
-    <!-- stage placeholders for bots -->
-    <div class="bot-stage red" id="stage-bot-red"></div>
-    <div class="bot-stage blue" id="stage-bot-blue"></div>
-    <div class="bot-stage green" id="stage-bot-green"></div>
-
-    <!-- camera UI -->
-    <div id="camera-ui">
-      <div id="camera-view">
-        <div class="cam-room" id="cam-room"></div>
-        <div class="cam-overlay-static"></div>
-        <div class="cam-scanlines"></div>
-        <div class="cam-static-noise"></div>
-        <div class="cam-vignette"></div>
-        <div class="cam-label" id="cam-label">CAM 1 — STAGE</div>
-        <div class="cam-buttons" id="cam-buttons"></div>
-      </div>
-    </div>
-
-    <div id="jumpscare"></div>
-
-    <div id="overlay">
-      <div id="tutorial">
-        <h2>Night One — Tutorial</h2>
-        <p>Phone Guy will call and guide you. Use the <strong>Left/Right Door</strong> buttons to close doors. Use the <strong>Left/Right Light</strong> to check hallways when a bot is nearby.</p>
-        <p>Doors and lights use <strong>power</strong>. Manage power and survive until <strong>6:00 AM</strong>.</p>
-        <div style="margin-top:14px">
-          <button class="btn" id="start-game">Start Night</button>
-          <button class="btn" id="skip-tutorial">Skip Tutorial</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="phone-guy"></div>
   </div>
 </div>
 
+<!-- Game Area -->
+<div id="game">
+  <div id="office"></div>
+
+  <!-- Cameras -->
+  <div class="camera-feed" id="cam1" style="top:50px; left:50px;"></div>
+  <div class="camera-feed" id="cam2" style="top:50px; right:50px;"></div>
+
+  <!-- Animatronics -->
+  <div class="animatronic" id="bot1" style="top:200px; left:300px; background: linear-gradient(to bottom,#a00,#500);"></div>
+  <div class="animatronic" id="bot2" style="top:220px; right:300px; background: linear-gradient(to bottom,#00a,#005);"></div>
+
+  <!-- Doors & Lights -->
+  <button class="door-btn" id="door-left">Close Left Door</button>
+  <button class="door-btn" id="door-right">Close Right Door</button>
+  <button class="light-btn" id="light-left">Left Light</button>
+  <button class="light-btn" id="light-right">Right Light</button>
+
+  <!-- Power & Clock -->
+  <div id="power-bar"><div id="power-fill"></div></div>
+  <div id="clock">12 AM</div>
+</div>
+
 <script>
-/* --------------------
-   State & configuration
-   -------------------- */
-const STATE = { running:false };
-let timeElapsed = 0;         // minutes since 12:00 AM
-const minuteMs = 1000;       // 1 real second = 1 in-game minute
-const nightEndMinute = 6*60; // 6:00 AM -> 360
+/* ---------- Start Menu ---------- */
+const startBtn = document.getElementById('start-night');
+startBtn.addEventListener('click', ()=>{
+  document.getElementById('fnaf-menu').style.display='none';
+  document.getElementById('game').style.display='block';
+  playPhoneGuy();
+  startClock();
+  startPowerDrain();
+  startAnimatronics();
+});
 
-let power = 100;
-let doorLeftClosed = false;
-let doorRightClosed = false;
-let lightLeftOn = false;
-let lightRightOn = false;
-let camsOpen = false;
-let mute = false;
-let currentCam = 1;
-
-/* cameras */
-const CAMS = {
-  1: {name:'STAGE', bg: 'linear-gradient(180deg,#120712,#001008)'},
-  2: {name:'LEFT HALL', bg: 'linear-gradient(180deg,#320000,#070000)'},
-  3: {name:'RIGHT HALL', bg: 'linear-gradient(180deg,#001033,#00060b)'},
-  4: {name:'DINING', bg: 'linear-gradient(180deg,#332033,#0b0910)'},
-  5: {name:'SUPPLY', bg: 'linear-gradient(180deg,#04321a,#02120a)'},
-  6: {name:'OFFICE', bg: 'linear-gradient(180deg,#3a260e,#120804)'}
-};
-
-/* animatronics */
-const BOTS = [
-  {id:'red', room:1, speed:0.02, aggressive:0.02},
-  {id:'blue', room:1, speed:0.01, aggressive:0.015},
-  {id:'green', room:4, speed:0.008, aggressive:0.01}
-];
-
-/* UI elements */
-const el = {
-  clock: document.getElementById('clock'),
-  powerInner: document.getElementById('power-inner'),
-  previewBg: document.getElementById('preview-bg'),
-  cameraOpenBtn: document.getElementById('camera-open'),
-  cameraUI: document.getElementById('camera-ui'),
-  camRoom: document.getElementById('cam-room'),
-  camLabel: document.getElementById('cam-label'),
-  camButtons: document.getElementById('cam-buttons'),
-  overlay: document.getElementById('overlay'),
-  tutorial: document.getElementById('tutorial'),
-  phoneGuy: document.getElementById('phone-guy'),
-  jumpscare: document.getElementById('jumpscare'),
-  doorPanelLeft: document.getElementById('door-panel-left'),
-  doorPanelRight: document.getElementById('door-panel-right'),
-  doorLeftEl: document.getElementById('door-left'),
-  doorRightEl: document.getElementById('door-right'),
-  ledLeft: document.getElementById('led-left'),
-  ledRight: document.getElementById('led-right'),
-  lightLeftBtn: document.getElementById('left-light-btn'),
-  lightRightBtn: document.getElementById('right-light-btn'),
-  leftDoorBtn: document.getElementById('left-door-btn'),
-  rightDoorBtn: document.getElementById('right-door-btn'),
-  leftLightVisual: document.getElementById('light-left'),
-  rightLightVisual: document.getElementById('light-right'),
-  cameraPreview: document.getElementById('camera-preview'),
-  toggleMuteBtn: document.getElementById('toggle-mute'),
-  phoneReplayBtn: document.getElementById('phone-replay'),
-  stageBotRed: document.getElementById('stage-bot-red'),
-  stageBotBlue: document.getElementById('stage-bot-blue'),
-  stageBotGreen: document.getElementById('stage-bot-green')
-};
-
-/* create cam buttons */
-(function(){
-  for(let i=1;i<=6;i++){
-    const btn = document.createElement('button');
-    btn.textContent = 'CAM ' + i;
-    btn.dataset.cam = i;
-    btn.onclick = ()=> switchCam(parseInt(btn.dataset.cam));
-    el.camButtons.appendChild(btn);
-  }
-})();
-
-/* --------------------
-   Utilities: audio, TTS, visuals
-   -------------------- */
-let audioCtx = null;
-function ensureAudio(){
-  if(audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
-function fxBeep(freq=600,dur=0.08,vol=0.05){
-  if(mute) return;
-  ensureAudio();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = 'square';
-  o.frequency.value = freq;
-  g.gain.value = vol;
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start();
-  o.stop(audioCtx.currentTime + dur);
+/* Phone Guy Tutorial */
+function playPhoneGuy() {
+  const msg = new SpeechSynthesisUtterance(
+    "Hello? Hello! Welcome to your first night. Watch the cameras and close the doors when the bots get close."
+  );
+  speechSynthesis.speak(msg);
 }
 
-/* Phone Guy messages */
-const PHONE_MESSAGES = [
-  "Hey, welcome to your first night. Doors and lights use power, so use them sparingly.",
-  "Check the cameras to see where the animatronics are. Close doors when they get close.",
-  "Lights let you peek at the hallways. For checking, use them quickly — they cost power.",
-  "Nice job — here's a small power bonus for listening."
-];
-
-function speakPhone(text){
-  if(!('speechSynthesis' in window) || mute){
-    // text fallback
-    el.phoneGuy.textContent = text;
-    el.phoneGuy.style.display = 'block';
-    setTimeout(()=>el.phoneGuy.style.display='none', 4200);
-    return;
-  }
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1;
-  u.pitch = 0.95;
-  u.lang = 'en-US';
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-  el.phoneGuy.textContent = text;
-  el.phoneGuy.style.display = 'block';
-  setTimeout(()=>el.phoneGuy.style.display='none', 4200);
+/* Clock */
+let hour=12;
+function startClock() {
+  const clockEl=document.getElementById('clock');
+  const interval=setInterval(()=>{
+    hour++;
+    if(hour>6){ clockEl.textContent="6 AM"; clearInterval(interval); alert("You survived the night!");}
+    else clockEl.textContent=hour+" AM";
+  },5000);
 }
 
-function showJumpscare(id){
-  el.jumpscare.style.display = 'flex';
-  el.jumpscare.textContent = id.toUpperCase() + '!';
-  el.jumpscare.style.background = botBg(id);
-  if(!mute){
-    try{
-      ensureAudio();
-      const o = audioCtx.createOscillator();
-      o.type = 'sawtooth';
-      o.frequency.value = 80;
-      const g = audioCtx.createGain(); g.gain.value = 0.3;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start();
-      setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3); o.stop(audioCtx.currentTime + 0.35); }, 120);
-    }catch(e){}
-  }
-  setTimeout(()=>el.jumpscare.style.display='none',900);
-}
-function botBg(id){ if(id==='red') return 'linear-gradient(180deg,#ff6b6b,#8a1b1b)'; if(id==='blue') return 'linear-gradient(180deg,#6fb3ff,#0a3b6f)'; return 'linear-gradient(180deg,#7bffb0,#0f6f3a)'; }
-
-/* --------------------
-   Camera UI functions
-   -------------------- */
-function updatePreview(){
-  el.previewBg.style.background = CAMS[currentCam].bg;
-  el.previewBg.textContent = `CAM ${currentCam} — ${CAMS[currentCam].name}`;
-}
-function switchCam(idx){
-  currentCam = idx;
-  el.camRoom.style.background = CAMS[idx].bg;
-  el.camLabel.textContent = `CAM ${idx} — ${CAMS[idx].name}`;
-  updatePreview();
-  renderBotsInCam(idx);
-}
-function openCameraUI(){ camsOpen = true; el.cameraUI.style.display = 'block'; switchCam(currentCam); }
-function closeCameraUI(){ camsOpen = false; el.cameraUI.style.display = 'none'; updatePreview(); }
-
-/* render bots inside camera room */
-function renderBotsInCam(camIndex){
-  // remove old
-  const old = el.camRoom.querySelectorAll('.cam-bot'); old.forEach(n=>n.remove());
-  BOTS.forEach(bot=>{
-    if(bot.room === camIndex){
-      const b = document.createElement('div');
-      b.className = `cam-bot ${bot.id}`;
-      b.textContent = bot.id.toUpperCase();
-      b.style.left = `${20 + Math.random()*60}%`;
-      b.style.top = `${35 + Math.random()*40}%`;
-      el.camRoom.appendChild(b);
-    }
-  });
+/* Power */
+let power=100;
+function startPowerDrain(){
+  const powerEl=document.getElementById('power-fill');
+  const drainInterval=setInterval(()=>{
+    power-=1;
+    if(power<0) power=0;
+    powerEl.style.width=power+"%";
+    if(power===0) alert("Power ran out! Night failed!");
+  },500);
 }
 
-/* --------------------
-   Door & Light controls (buttons)
-   -------------------- */
-/* toggle door visual (slide door panel down/up) */
-function setDoor(side, closed){
-  if(side==='left'){
-    doorLeftClosed = closed;
-    if(closed) el.doorPanelLeft.classList.add('down'); else el.doorPanelLeft.classList.remove('down');
-    el.doorLeftEl.classList.toggle('closed', closed);
-    el.doorLeftEl.classList.toggle('open', !closed);
-  } else {
-    doorRightClosed = closed;
-    if(closed) el.doorPanelRight.classList.add('down'); else el.doorPanelRight.classList.remove('down');
-    el.doorRightEl.classList.toggle('closed', closed);
-    el.doorRightEl.classList.toggle('open', !closed);
-  }
-  fxBeep(900,0.06,0.06);
-}
-function toggleDoorButton(side){ setDoor(side, !(side==='left' ? doorLeftClosed : doorRightClosed)); }
+/* Animatronics */
+function startAnimatronics(){
+  const bot1=document.getElementById('bot1');
+  const bot2=document.getElementById('bot2');
+  bot1.style.display='block';
+  bot2.style.display='block';
 
-/* lights: toggle spotlight, returns whether bot revealed */
-function setLight(side, on){
-  if(side==='left'){
-    lightLeftOn = on; el.lightLeftVisual.classList.toggle('on', on);
-  } else {
-    lightRightOn = on; el.rightLightVisual.classList.toggle('on', on); // note: rightLightVisual exists? use el.rightLightVisual
-  }
-  // rightLightVisual not present name earlier; use el.rightLightVisual fallback:
-  if(!el.rightLightVisual) el.rightLightVisual = document.getElementById('light-right');
-  el.rightLightVisual.classList.toggle('on', lightRightOn);
-  fxBeep(1200,0.05,0.04);
-}
-function toggleLightButton(side){ setLight(side, !(side==='left' ? lightLeftOn : lightRightOn)); power = Math.max(0, power - 1); updatePowerUI(); }
-
-/* attach button handlers */
-el.leftDoorBtn.onclick = ()=>{ if(!STATE.running) return; toggleDoorButton('left'); };
-el.rightDoorBtn.onclick = ()=>{ if(!STATE.running) return; toggleDoorButton('right'); };
-el.leftLightBtn.onclick = ()=>{ if(!STATE.running) return; toggleLightButton('left'); };
-el.rightLightBtn.onclick = ()=>{ if(!STATE.running) return; toggleLightButton('right'); };
-
-/* also clicking the small visual light / door toggles for convenience */
-el.leftLightVisual.onclick = ()=>{ if(!STATE.running) return; toggleLightButton('left'); };
-el.rightLightVisual.onclick = ()=>{ if(!STATE.running) return; toggleLightButton('right'); };
-el.doorLeftEl.onclick = ()=>{ if(!STATE.running) return; toggleDoorButton('left'); };
-el.doorRightEl.onclick = ()=>{ if(!STATE.running) return; toggleDoorButton('right'); };
-
-/* --------------------
-   Animatronic AI & behavior
-   -------------------- */
-function botAdvanceLogic(){
-  BOTS.forEach(bot=>{
-    if(Math.random() < 0.15 * bot.speed * 10){
-      const dir = Math.random() < 0.5 ? -1 : 1;
-      let next = bot.room + (Math.random() < 0.6 ? dir : 0);
-      if(next < 1) next = 1;
-      if(next > 6) next = 6;
-      if(Math.random() < 0.05) next = Math.floor(1 + Math.random()*6);
-      bot.room = next;
-    }
-    if(Math.random() < bot.aggressive * (1 + timeElapsed/200)){
-      if(bot.room < 6) bot.room++;
-      else if(bot.room > 6) bot.room--;
-    }
-  });
+  let pos1=300, pos2=300;
+  const moveInterval=setInterval(()=>{
+    // simple AI toward office
+    pos1-=5; pos2-=4;
+    if(pos1<100){ alert("Bot1 got you! Night failed!"); clearInterval(moveInterval);}
+    if(pos2<100){ alert("Bot2 got you! Night failed!"); clearInterval(moveInterval);}
+    bot1.style.left=pos1+"px"; bot2.style.right=pos2+"px";
+  },1000);
 }
 
-/* check if bots attack office */
-function checkForAttacks(){
-  BOTS.forEach(bot=>{
-    if(bot.room === 6){
-      // determine door mapping: red -> left, blue -> right, green -> either
-      if(bot.id === 'red'){
-        if(!doorLeftClosed){ showJumpscare('red'); STATE.running = false; setTimeout(()=>location.reload(),900); }
-      } else if(bot.id === 'blue'){
-        if(!doorRightClosed){ showJumpscare('blue'); STATE.running = false; setTimeout(()=>location.reload(),900); }
-      } else {
-        if(!doorLeftClosed || !doorRightClosed){ showJumpscare('green'); STATE.running = false; setTimeout(()=>location.reload(),900); }
-      }
-    }
-  });
-}
+/* Doors & Lights */
+document.getElementById('door-left').addEventListener('click',()=>{alert("Left door closed!");});
+document.getElementById('door-right').addEventListener('click',()=>{alert("Right door closed!");});
+document.getElementById('light-left').addEventListener('click',()=>{alert("Left light on!");});
+document.getElementById('light-right').addEventListener('click',()=>{alert("Right light on!");});
 
-/* highlight door LEDs when bots near (rooms 2/3/4/5 mapping) */
-function updateDoorLEDs(){
-  const leftNearby = BOTS.some(b => [2,5].includes(b.room));
-  const rightNearby = BOTS.some(b => [3,4].includes(b.room));
-  el.ledLeft.style.background = leftNearby ? '#ff6b6b' : '#4b4b4b';
-  el.ledLeft.style.boxShadow = leftNearby ? '0 0 14px rgba(255,100,100,0.6)' : '0 0 6px rgba(0,0,0,0.6)';
-  el.ledRight.style.background = rightNearby ? '#6bb3ff' : '#4b4b4b';
-  el.ledRight.style.boxShadow = rightNearby ? '0 0 14px rgba(80,160,255,0.5)' : '0 0 6px rgba(0,0,0,0.6)';
-}
-
-/* stage placeholders opacity */
-function updateStageBots(){
-  el.stageBotRed.style.opacity = BOTS[0].room === 1 ? '1' : '0.12';
-  el.stageBotBlue.style.opacity = BOTS[1].room === 1 ? '1' : '0.12';
-  el.stageBotGreen.style.opacity = BOTS[2].room === 1 ? '1' : '0.12';
-}
-
-/* render bots in open camera */
-function renderCamBots(){
-  if(!camsOpen) return;
-  renderBotsInCam(currentCam);
-}
-
-/* --------------------
-   Game loop: time, power drain, ticks
-   -------------------- */
-function startGame(){
-  document.getElementById('overlay').style.display = 'none';
-  STATE.running = true;
-  timeElapsed = 0; power = 100;
-  speakPhone(PHONE_MESSAGES[0]);
-  setTimeout(()=>speakPhone(PHONE_MESSAGES[1]),4500);
-  setTimeout(()=>speakPhone(PHONE_MESSAGES[2]),9000);
-  setTimeout(()=>{ speakPhone(PHONE_MESSAGES[3]); power = Math.min(100,power + 5); updatePowerUI(); },14000);
-
-  setInterval(()=>{ if(!STATE.running) return; gameMinuteTick(); }, minuteMs);
-  setInterval(()=>{ if(!STATE.running) return; botAdvanceLogic(); updateStageBots(); updateDoorLEDs(); if(camsOpen) renderCamBots(); if(Math.random()<0.01 + timeElapsed/1200) BOTS.forEach(b=>{ if(Math.random() < 0.04 + timeElapsed/900) b.room = Math.min(6, b.room+1); }); checkForAttacks(); }, 950);
-
-  setInterval(()=>{ if(!STATE.running) return;
-    if(camsOpen) power = Math.max(0, power - 0.17);
-    if(doorLeftClosed) power = Math.max(0, power - 0.22);
-    if(doorRightClosed) power = Math.max(0, power - 0.22);
-    if(lightLeftOn) power = Math.max(0, power - 0.12);
-    if(lightRightOn) power = Math.max(0, power - 0.12);
-    power = Math.max(0, power - 0.05);
-    updatePowerUI();
-    if(power <= 0){ STATE.running = false; speakPhone("Power is out. Game Over."); alert('Power depleted. Game Over.'); location.reload(); }
-  }, 1000);
-}
-
-function gameMinuteTick(){
-  timeElapsed++;
-  el.clock.textContent = formatClock(timeElapsed);
-  if(timeElapsed >= nightEndMinute){ STATE.running = false; speakPhone("You survived the night!"); alert('You survived the night!'); location.reload(); }
-}
-
-/* format clock: timeElapsed minutes since 12:00 AM */
-function formatClock(mins){
-  let h = Math.floor(mins/60)%12; if(h===0) h = 12;
-  let m = mins%60;
-  let ampm = (Math.floor(mins/60)%24) >= 12 ? 'PM' : 'AM';
-  return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
-}
-
-/* update power UI */
-function updatePowerUI(){
-  el.powerInner.style.width = `${power}%`;
-  if(power < 20) el.powerInner.style.boxShadow = '0 0 20px rgba(255,100,100,0.2) inset';
-  else el.powerInner.style.boxShadow = '0 0 12px rgba(0,220,140,0.12) inset';
-}
-
-/* click handlers for camera UI and others */
-el.cameraPreview.onclick = ()=> openCameraUI();
-el.cameraOpenBtn.onclick = ()=> openCameraUI();
-el.cameraUI.onclick = (e)=>{ if(e.target===el.cameraUI) closeCameraUI(); };
-document.getElementById('start-game').onclick = startGame;
-document.getElementById('skip-tutorial').onclick = ()=>{ document.getElementById('overlay').style.display='none'; startGame(); };
-el.toggleMuteBtn.onclick = ()=>{ mute = !mute; el.toggleMuteBtn.textContent = mute ? 'Unmute' : 'Mute'; if(mute) speechSynthesis.cancel(); };
-el.phoneReplayBtn.onclick = ()=>{ speakPhone("Phone replay: remember to check cameras, close doors, and manage power."); fxBeep(700,0.08,0.05); };
-
-/* keyboard esc to close cameras */
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeCameraUI(); });
-
-/* camera bots rendering helper */
-function renderBotsInCam(camIndex){
-  const existing = el.camRoom.querySelectorAll('.cam-bot'); existing.forEach(n=>n.remove());
-  BOTS.forEach(bot=>{
-    if(bot.room === camIndex){
-      const b = document.createElement('div');
-      b.className = `cam-bot ${bot.id}`;
-      b.textContent = bot.id.toUpperCase();
-      b.style.left = `${20 + Math.random()*60}%`;
-      b.style.top = `${35 + Math.random()*40}%`;
-      el.camRoom.appendChild(b);
-    }
-  });
-}
-
-/* init UI */
-function initUI(){
-  updatePreview();
-  el.camRoom.style.background = CAMS[1].bg;
-  el.camLabel.textContent = `CAM 1 — ${CAMS[1].name}`;
-  el.cameraUI.style.display = 'none';
-  el.doorPanelLeft.classList.remove('down'); el.doorPanelRight.classList.remove('down');
-  el.doorLeftEl.classList.add('open'); el.doorRightEl.classList.add('open');
-  updatePowerUI();
-  updateStageBots();
-  updateDoorLEDs();
-  setInterval(()=>{ if(!camsOpen) el.cameraPreview.style.transform = `translateY(${Math.sin(Date.now()/600)*2}px)`; }, 200);
-}
-
-/* On load */
-initUI();
-updatePreview();
-
-/* expose for debug */
-window.openCameraUI = openCameraUI;
-window.switchCam = switchCam;
+/* Camera Switching */
+document.getElementById('cam1').addEventListener('click',()=>{alert("Switched to Camera 1");});
+document.getElementById('cam2').addEventListener('click',()=>{alert("Switched to Camera 2");});
 </script>
+
 </body>
 </html>
