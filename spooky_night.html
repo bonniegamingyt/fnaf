@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Spooky Night — HTML Demo</title>
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --panel:#0f1720;
+    --accent:#ff6b6b;
+    --text:#e6eef6;
+    --muted:#9aa8b8;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{
+    background: linear-gradient(180deg,#020205 0%, #0b1220 60%);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  .game {
+    width:980px;
+    height:620px;
+    background: linear-gradient(180deg,#071127 0%, #0b1622 100%);
+    box-shadow: 0 10px 40px rgba(2,6,12,0.8), inset 0 1px 0 rgba(255,255,255,0.03);
+    border-radius:14px;
+    display:grid;
+    grid-template-columns: 1fr 340px;
+    overflow:hidden;
+    gap:16px;
+    padding:16px;
+  }
+
+  /* Main game canvas area */
+  .stage {
+    background: linear-gradient(180deg,#06111a,#0a1420);
+    border-radius:10px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  canvas#view {
+    flex:1;
+    background: linear-gradient(180deg,#061018,#0b1122);
+    border-radius:6px;
+    width:100%;
+    height:100%;
+    display:block;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
+  }
+
+  .controls {
+    display:flex;
+    gap:8px;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .btn {
+    background:var(--glass);
+    border:1px solid rgba(255,255,255,0.03);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+    letter-spacing:0.3px;
+    user-select:none;
+  }
+  .btn.active { background: linear-gradient(90deg,#1b2a3a,#0f2434); box-shadow:0 6px 18px rgba(0,0,0,0.5) inset; color:var(--accent);}
+
+  .sidebar {
+    width:340px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:10px;
+    padding:12px;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  .panel h3{margin:0 0 6px 0;font-size:14px;color:var(--muted);font-weight:700}
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .stat {
+    background: rgba(0,0,0,0.15);
+    padding:8px;
+    border-radius:8px;
+    font-weight:700;
+    display:flex;
+    flex-direction:column;
+  }
+  .stat small{color:var(--muted);font-weight:600;margin-top:6px}
+  .progress {
+    height:12px;
+    background:rgba(0,0,0,0.18);
+    border-radius:8px;
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .progress > i { display:block; height:100%; background: linear-gradient(90deg,#ff9a76,#ff6b6b); width:50%; }
+
+  .cameras {
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .cam-btn{
+    flex:1;
+    min-width:90px;
+    padding:8px;
+    border-radius:8px;
+    text-align:center;
+    cursor:pointer;
+    background:rgba(255,255,255,0.02);
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .cam-btn.active { outline:2px solid rgba(255,255,255,0.04); box-shadow:0 4px 20px rgba(0,0,0,0.5) inset; }
+
+  .footer { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:6px; color:var(--muted); font-size:13px }
+
+  /* Game over / win overlay */
+  .overlay {
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .message {
+    background:rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.04);
+    padding:22px 28px;
+    border-radius:12px;
+    text-align:center;
+    color:var(--text);
+    pointer-events:auto;
+  }
+  .message h1{margin:0 0 6px 0;font-size:28px}
+  .message p{margin:0 0 12px 0;color:var(--muted)}
+  .message .big-btn{background:linear-gradient(90deg,#ff7b7b,#ff4f4f);padding:10px 14px;border-radius:8px;color:white;font-weight:800;border:none;cursor:pointer}
+
+  .instructions small{color:var(--muted);display:block;margin-top:6px}
+  .credits{font-size:12px;color:var(--muted);}
+
+  /* responsive */
+  @media (max-width:1060px){ .game{width:94vw;height:86vh;grid-template-columns:1fr 300px} }
+  @media (max-width:780px){
+    body{padding:8px}
+    .game{grid-template-columns:1fr; width:100%; height:calc(100vh - 32px);}
+    .sidebar{order:2}
+  }
+</style>
+</head>
+<body>
+<div class="game" role="application" aria-label="Spooky Night game">
+  <div class="stage panel" id="main-stage" style="position:relative;">
+    <canvas id="view" width="580" height="520"></canvas>
+    <div class="controls">
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="toggle-monitor">Toggle Monitor (M)</button>
+        <button class="btn" id="cam-left">Cam Left</button>
+        <button class="btn" id="cam-center">Cam Center</button>
+        <button class="btn" id="cam-right">Cam Right</button>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="left-door">Left Door (Q)</button>
+        <button class="btn" id="right-door">Right Door (E)</button>
+        <button class="btn" id="left-light">Left Light (A)</button>
+        <button class="btn" id="right-light">Right Light (D)</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="panel">
+      <h3>Office Status</h3>
+      <div class="status-grid">
+        <div class="stat">
+          <div>Time</div>
+          <div style="font-size:20px" id="clock">12:00 AM</div>
+          <small>Survive until 6:00 AM</small>
+        </div>
+        <div class="stat">
+          <div>Power</div>
+          <div style="font-size:20px" id="power-text">100%</div>
+          <div class="progress" aria-hidden="true"><i id="power-bar" style="width:100%"></i></div>
+          <small>Doors & monitor drain power</small>
+        </div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="status-grid">
+        <div class="stat">
+          <div>Left Door</div>
+          <div id="ld-state">Closed</div>
+          <small>Blocks left bot</small>
+        </div>
+        <div class="stat">
+          <div>Right Door</div>
+          <div id="rd-state">Open</div>
+          <small>Blocks right bot</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Cameras</h3>
+      <div class="cameras">
+        <div class="cam-btn" id="c1">CAM 1</div>
+        <div class="cam-btn" id="c2">CAM 2</div>
+        <div class="cam-btn" id="c3">CAM 3</div>
+        <div class="cam-btn" id="c4">CAM 4</div>
+      </div>
+      <div class="footer"><div class="instructions">Click cameras to cycle<br><small>Monitor drains power while open</small></div></div>
+    </div>
+
+    <div class="panel">
+      <h3>Bots</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1">
+          <div style="font-weight:800">Bouncer</div><small style="color:var(--muted)">Aggressive, left</small>
+        </div>
+        <div id="bouncer-progress" style="width:70px" class="progress"><i style="width:5%"></i></div>
+      </div>
+      <div style="height:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1">
+          <div style="font-weight:800">Singer</div><small style="color:var(--muted)">Wanders center</small>
+        </div>
+        <div id="singer-progress" style="width:70px" class="progress"><i style="width:5%"></i></div>
+      </div>
+      <div style="height:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1">
+          <div style="font-weight:800">Jester</div><small style="color:var(--muted)">Shy but quick</small>
+        </div>
+        <div id="jester-progress" style="width:70px" class="progress"><i style="width:5%"></i></div>
+      </div>
+    </div>
+
+    <div class="panel credits">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong>Spooky Night</strong><br><small>HTML demo — inspired mechanics, original characters</small>
+        </div>
+        <div style="text-align:right">
+          <small>Controls</small><br>
+          <small>M Monitor</small><br>
+          <small>Q/E Doors</small><br>
+          <small>A/D Lights</small>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- overlay container -->
+  <div class="overlay" id="overlay" style="display:none">
+    <div class="message" id="message">
+      <h1 id="message-title">Game Over</h1>
+      <p id="message-body">The bots got you... try again?</p>
+      <button class="big-btn" id="restart">Restart</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  Spooky Night — single-file FNAF-style demo
+  - Save as "spooky_night.html" and open in browser.
+  - No external assets used.
+*/
+
+/* ======== Game state & constants ======== */
+const canvas = document.getElementById('view');
+const ctx = canvas.getContext('2d');
+
+let game = {
+  running: true,
+  timeMinutes: 0,        // start at 12:00 AM => 0, target 6:00 AM => 360 minutes (but we'll speed up)
+  minuteSpeedMs: 1400,   // how many ms per in-game minute (adjust difficulty)
+  lastMinuteTick: performance.now(),
+  power: 100,            // percent
+  monitorOpen: true,
+  currentCam: 1,
+  leftDoor: false,
+  rightDoor: true,
+  leftLight: false,
+  rightLight: false,
+  overlay: null,
+  endAtMinute: 360,      // 6 hours * 60
+  tickTimer: null,
+  aiTimer: null,
+  win:false
+};
+
+/* Animatronics: each has a position stage (0=start, 4=office door), and movement rules */
+const bots = {
+  bouncer: { name:'Bouncer', side:'left', stage:0, speed:0.05, baseAdvanceSec:10, lastAdvance:performance.now() },
+  singer:  { name:'Singer',  side:'center', stage:0, speed:0.04, baseAdvanceSec:12, lastAdvance:performance.now() },
+  jester:  { name:'Jester',  side:'right', stage:0, speed:0.03, baseAdvanceSec:16, lastAdvance:performance.now() }
+};
+
+/* Stage positions for drawing */
+const stages = ['backstage','hallway','near','door','office'];
+
+const UI = {
+  clock: document.getElementById('clock'),
+  powerText: document.getElementById('power-text'),
+  powerBar: document.getElementById('power-bar'),
+  ldState: document.getElementById('ld-state'),
+  rdState: document.getElementById('rd-state'),
+  bouncerProg: document.querySelector('#bouncer-progress i'),
+  singerProg: document.querySelector('#singer-progress i'),
+  jesterProg: document.querySelector('#jester-progress i'),
+  overlay: document.getElementById('overlay'),
+  messageTitle: document.getElementById('message-title'),
+  messageBody: document.getElementById('message-body'),
+  camBtns: {
+    1: document.getElementById('c1'),
+    2: document.getElementById('c2'),
+    3: document.getElementById('c3'),
+    4: document.getElementById('c4'),
+  }
+};
+
+/* Buttons */
+const btnMonitor = document.getElementById('toggle-monitor');
+const btnCamLeft = document.getElementById('cam-left');
+const btnCamCenter = document.getElementById('cam-center');
+const btnCamRight = document.getElementById('cam-right');
+const btnLeftDoor = document.getElementById('left-door');
+const btnRightDoor = document.getElementById('right-door');
+const btnLeftLight = document.getElementById('left-light');
+const btnRightLight = document.getElementById('right-light');
+const btnRestart = document.getElementById('restart');
+
+/* ======== Initialization ======== */
+function init(){
+  // Canvas scaling for crisp look
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * devicePixelRatio);
+    canvas.height = Math.floor(rect.height * devicePixelRatio);
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // initial UI
+  updateUI();
+
+  // Attach events
+  btnMonitor.addEventListener('click', toggleMonitor);
+  btnCamLeft.addEventListener('click', ()=>setCamera(1));
+  btnCamCenter.addEventListener('click', ()=>setCamera(2));
+  btnCamRight.addEventListener('click', ()=>setCamera(3));
+  btnLeftDoor.addEventListener('click', ()=>toggleDoor('left'));
+  btnRightDoor.addEventListener('click', ()=>toggleDoor('right'));
+  btnLeftLight.addEventListener('click', ()=>toggleLight('left'));
+  btnRightLight.addEventListener('click', ()=>toggleLight('right'));
+  btnRestart.addEventListener('click', restartGame);
+
+  for(let i=1;i<=4;i++){
+    UI.camBtns[i].addEventListener('click', ()=>setCamera(i));
+  }
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key.toLowerCase()==='m') toggleMonitor();
+    if(e.key.toLowerCase() === 'q') toggleDoor('left');
+    if(e.key.toLowerCase() === 'e') toggleDoor('right');
+    if(e.key.toLowerCase() === 'a') toggleLight('left');
+    if(e.key.toLowerCase() === 'd') toggleLight('right');
+  });
+
+  // Start game loops
+  game.lastMinuteTick = performance.now();
+  game.tickTimer = requestAnimationFrame(loop);
+  game.aiTimer = setInterval(aiAdvance, 900); // frequent small AI checks
+}
+
+/* ======== UI & Controls ======== */
+function toggleMonitor(){
+  game.monitorOpen = !game.monitorOpen;
+  btnMonitor.classList.toggle('active', game.monitorOpen);
+  updateUI();
+  playBeep(400, 0.06);
+}
+function setCamera(n){
+  game.currentCam = n;
+  // Monitor automatically opens if you pick camera
+  game.monitorOpen = true;
+  btnMonitor.classList.add('active');
+  updateUI();
+  playBeep(600, 0.04);
+}
+function toggleDoor(side){
+  if(side==='left'){ game.leftDoor = !game.leftDoor; btnLeftDoor.classList.toggle('active', game.leftDoor); document.getElementById('ld-state').innerText = game.leftDoor ? 'Closed':'Open'; }
+  else { game.rightDoor = !game.rightDoor; btnRightDoor.classList.toggle('active', game.rightDoor); document.getElementById('rd-state').innerText = game.rightDoor ? 'Closed':'Open'; }
+  playBeep(250, 0.06);
+}
+function toggleLight(side){
+  if(side==='left'){ game.leftLight = !game.leftLight; btnLeftLight.classList.toggle('active', game.leftLight); }
+  else { game.rightLight = !game.rightLight; btnRightLight.classList.toggle('active', game.rightLight); }
+  playBeep(200, 0.03);
+}
+function updateUI(){
+  // Cameras active highlight
+  for(let i=1;i<=4;i++){
+    UI.camBtns[i].classList.toggle('active', game.currentCam === i && game.monitorOpen);
+  }
+  UI.powerText.innerText = Math.max(0, Math.floor(game.power)) + '%';
+  UI.powerBar.style.width = Math.max(0, game.power) + '%';
+  document.getElementById('ld-state').innerText = game.leftDoor ? 'Closed':'Open';
+  document.getElementById('rd-state').innerText = game.rightDoor ? 'Closed':'Open';
+  btnMonitor.classList.toggle('active', game.monitorOpen);
+  btnLeftDoor.classList.toggle('active', game.leftDoor);
+  btnRightDoor.classList.toggle('active', game.rightDoor);
+  btnLeftLight.classList.toggle('active', game.leftLight);
+  btnRightLight.classList.toggle('active', game.rightLight);
+}
+
+/* ======== Game logic ======== */
+
+/* Advance bots toward office depending on conditions.
+   Bots are more likely to progress when the monitor is on or lights are off, etc.
+*/
+function aiAdvance(){
+  if(!game.running) return;
+  const now = performance.now();
+
+  Object.keys(bots).forEach(k=>{
+    const bot = bots[k];
+    // Determine base chance: bots advance if enough time has passed since their last advance
+    const elapsed = (now - bot.lastAdvance) / 1000; // seconds
+    let threshold = bot.baseAdvanceSec;
+
+    // difficulty modifiers
+    if(game.monitorOpen) threshold *= 0.9;         // using monitor slightly attracts them
+    if((bot.side==='left' && !game.leftDoor) || (bot.side==='right' && !game.rightDoor)) threshold *= 0.8;
+    if(game.leftLight && bot.side==='left') threshold *= 1.2;
+    if(game.rightLight && bot.side==='right') threshold *= 1.2;
+
+    // pressure: lower power -> bots bolder
+    threshold *= (0.9 + (100 - game.power)/400);
+
+    // If camera is on the same area, they may pause / hide
+    if(game.monitorOpen && game.currentCam === cameraForBot(bot)) {
+      // slight delay/slow down
+      if(Math.random() < 0.7) return;
+      threshold *= 1.6;
+    }
+
+    if(elapsed > threshold){
+      bot.lastAdvance = now;
+      // small probabilistic check
+      if(Math.random() < 0.7 + (100 - game.power)/200) {
+        bot.stage = Math.min(4, bot.stage + 1);
+        // if reached door stage (4), and door is open, they attack
+        if(bot.stage >=4) {
+          const doorClosed = (bot.side==='left')? game.leftDoor : (bot.side==='right')? game.rightDoor : true;
+          if(!doorClosed){
+            // they attack after a short delay
+            setTimeout(()=>attackIfAtOffice(bot), 800 + Math.random()*1000);
+          }
+        }
+      }
+    }
+  });
+
+  // update progress bars
+  UI.bouncerProg.style.width = (bots.bouncer.stage/4*100)+'%';
+  UI.singerProg.style.width = (bots.singer.stage/4*100)+'%';
+  UI.jesterProg.style.width = (bots.jester.stage/4*100)+'%';
+}
+
+/* Maps bot to camera index roughly */
+function cameraForBot(bot){
+  if(bot.side==='left') return 1;
+  if(bot.side==='center') return 2;
+  return 3;
+}
+
+function attackIfAtOffice(bot){
+  if(!game.running) return;
+  if(bot.stage<4) return;
+  const doorClosed = (bot.side==='left')? game.leftDoor : (bot.side==='right')? game.rightDoor : true;
+  if(!doorClosed){
+    // game over
+    lose(`${bot.name} entered the office!`);
+  } else {
+    // bounce back a bit
+    bot.stage = 3;
+    playBeep(120, 0.12);
+  }
+}
+
+/* Called when the player loses */
+function lose(reason){
+  if(!game.running) return;
+  game.running = false;
+  UI.overlay.style.display = 'flex';
+  UI.messageTitle.innerText = 'Game Over';
+  UI.messageBody.innerText = reason;
+  playBeep(80, 0.4, 0.2);
+  cancelAnimationFrame(game.tickTimer);
+  clearInterval(game.aiTimer);
+}
+
+/* Called when player wins */
+function win(){
+  if(!game.running) return;
+  game.running = false;
+  UI.overlay.style.display = 'flex';
+  UI.messageTitle.innerText = 'You Survived!';
+  UI.messageBody.innerText = '6:00 AM — you made it through the night.';
+  UI.messageTitle.style.color = '#a6ffcf';
+  playMelody();
+  cancelAnimationFrame(game.tickTimer);
+  clearInterval(game.aiTimer);
+}
+
+/* Restart the game */
+function restartGame(){
+  // reset
+  game.running = true;
+  UI.overlay.style.display = 'none';
+  UI.messageTitle.style.color = '';
+  game.timeMinutes = 0;
+  game.power = 100;
+  game.monitorOpen = true;
+  game.currentCam = 1;
+  game.leftDoor = false;
+  game.rightDoor = true;
+  game.leftLight = false;
+  game.rightLight = false;
+  Object.keys(bots).forEach(k=>{ bots[k].stage=0; bots[k].lastAdvance = performance.now(); });
+  updateUI();
+  game.aiTimer = setInterval(aiAdvance, 900);
+  game.tickTimer = requestAnimationFrame(loop);
+}
+
+/* ======== Game loop & rendering ======== */
+
+function loop(now){
+  if(!game.running) return;
+  // time progression
+  if(now - game.lastMinuteTick >= game.minuteSpeedMs){
+    game.lastMinuteTick = now;
+    game.timeMinutes += 1; // increase one in-game minute
+    // power drain: baseline + monitor + doors + lights
+    let drain = 0.12; // baseline per minute
+    if(game.monitorOpen) drain += 0.28;
+    if(game.leftDoor) drain += 0.35;
+    if(game.rightDoor) drain += 0.35;
+    if(game.leftLight) drain += 0.18;
+    if(game.rightLight) drain += 0.18;
+
+    // double drain when power low
+    if(game.power < 30) drain *= 1.8;
+
+    game.power = Math.max(0, game.power - drain);
+
+    // if power hits 0, lights and monitor die
+    if(game.power <= 0){
+      game.monitorOpen = false;
+      game.leftLight = false;
+      game.rightLight = false;
+    }
+
+    // update clock UI
+    updateClock();
+    updateUI();
+
+    // small automatic bot move when power low
+    if(game.power <= 0 && Math.random() < 0.6) {
+      Object.values(bots).forEach(b=> b.stage = Math.min(4, b.stage + (Math.random()<0.5?1:0)));
+    }
+  }
+
+  // if time reached 6:00 AM, win
+  if(game.timeMinutes >= game.endAtMinute) {
+    win();
+    return;
+  }
+
+  // render
+  render();
+
+  // schedule next frame
+  game.tickTimer = requestAnimationFrame(loop);
+}
+
+function updateClock(){
+  // start at 12:00 AM; each minute increments. target 6:00 AM -> 6 hours = 360 minutes.
+  let totalMinutes = 0 + game.timeMinutes;
+  let hour = Math.floor(totalMinutes / 60) % 12;
+  if(hour === 0) hour = 12;
+  let minute = totalMinutes % 60;
+  let ampm = Math.floor((totalMinutes) / 60) < 12 ? 'AM' : 'AM'; // stays AM until 12 hours (we won't go that far)
+  UI.clock.innerText = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')} ${ampm}`;
+}
+
+/* Render the game camera / office */
+function render(){
+  // clear
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const w = canvas.width / devicePixelRatio;
+  const h = canvas.height / devicePixelRatio;
+
+  // draw background office (simple)
+  drawOfficeBackground(w,h);
+
+  // draw bots on map depending on camera view
+  drawBots(w,h);
+
+  // draw HUD overlay (doors / lights)
+  drawOfficeHUD(w,h);
+
+  // draw "monitor" effect if monitor is closed (dark), and show camera feeds when open
+  if(game.monitorOpen){
+    drawCameraView(w,h, game.currentCam);
+  } else {
+    // dim
+    ctx.fillStyle = 'rgba(0,0,0,0.86)';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillRect(10,10,w-20,h-20);
+    ctx.fillStyle = '#ddd';
+    ctx.font = '18px Inter, sans-serif';
+    ctx.fillText('Monitor offline (press M to open)', 18, 28);
+  }
+}
+
+function drawOfficeBackground(w,h){
+  // floor
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'#05121a');
+  grad.addColorStop(1,'#071826');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,w,h);
+
+  // walls and window
+  ctx.fillStyle = '#071428';
+  ctx.fillRect(12, 60, w-24, h-140);
+
+  // desk
+  ctx.fillStyle = '#06121a';
+  ctx.fillRect(0, h - 120, w, 120);
+
+  // left door & right door rectangles
+  // left door
+  ctx.fillStyle = game.leftDoor ? '#0b2b1a' : '#2a1d1d';
+  ctx.fillRect(18, h-220, 120, 160);
+  ctx.fillStyle = game.leftDoor ? '#9fe3c4' : '#b4b4b4';
+  ctx.font = '16px Inter, sans-serif';
+  ctx.fillText('LEFT', 40, h-200);
+
+  // right door
+  ctx.fillStyle = game.rightDoor ? '#0b2b1a' : '#2a1d1d';
+  ctx.fillRect(w-138, h-220, 120, 160);
+  ctx.fillStyle = game.rightDoor ? '#9fe3c4' : '#b4b4b4';
+  ctx.fillText('RIGHT', w-118, h-200);
+
+  // center door (small)
+  ctx.fillStyle = '#232b34';
+  ctx.fillRect((w/2)-40, h-200, 80, 150);
+
+  // desk monitor / camera indicator
+  ctx.fillStyle = '#0b1624';
+  ctx.fillRect(w-320, h-110, 240, 78);
+  ctx.fillStyle = '#25d4ff';
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillText('MONITOR', w-300, h-90);
+}
+
+function drawOfficeHUD(w,h){
+  // small indicators for lights
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillStyle = game.leftLight ? '#ffd7c2' : 'rgba(255,255,255,0.08)';
+  ctx.fillText('LEFT LIGHT', 28, h-240);
+  ctx.fillStyle = game.rightLight ? '#ffd7c2' : 'rgba(255,255,255,0.08)';
+  ctx.fillText('RIGHT LIGHT', w-140, h-240);
+
+  // power bar drawn subtly on desk
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(20, h-50, w-40, 14);
+  ctx.fillStyle = 'rgba(255,120,100,0.18)';
+  ctx.fillRect(22, h-48, (w-44) * (game.power/100), 10);
+}
+
+function drawCameraView(w,h, cam){
+  // simulate different camera scenes
+  ctx.save();
+  // vignette
+  const vgrad = ctx.createLinearGradient(0,0,0,h);
+  vgrad.addColorStop(0,'rgba(0,0,0,0)');
+  vgrad.addColorStop(1,'rgba(0,0,0,0.12)');
+  ctx.fillStyle = vgrad;
+  ctx.fillRect(0,0,w,h);
+
+  // camera label
+  ctx.font = '18px Inter, sans-serif';
+  ctx.fillStyle = '#bfe7ff';
+  ctx.fillText('CAM ' + cam, 18, 28);
+
+  // display different background elements per camera
+  if(cam === 1){
+    drawCamSceneLeft(w,h);
+  } else if(cam === 2){
+    drawCamSceneCenter(w,h);
+  } else if(cam === 3){
+    drawCamSceneRight(w,h);
+  } else {
+    drawCamSceneBackstage(w,h);
+  }
+
+  // overlay flicker lines
+  for(let i=0;i<8;i++){
+    ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.03})`;
+    ctx.fillRect(0, Math.random()*h, w, Math.random()*2);
+  }
+
+  ctx.restore();
+}
+
+/* Draw each camera scene — simple shapes & bot positions */
+function drawCamSceneLeft(w,h){
+  // hallway
+  ctx.fillStyle = '#07182a';
+  ctx.fillRect(60,80, w-120, h-200);
+  // left bot if stage >0
+  const b = bots.bouncer.stage;
+  drawBotAtLane('left', b, w, h, '🛡️');
+}
+
+function drawCamSceneCenter(w,h){
+  ctx.fillStyle = '#081226';
+  ctx.fillRect(60,80, w-120, h-200);
+  const b = bots.singer.stage;
+  drawBotAtLane('center', b, w, h, '🎤');
+}
+
+function drawCamSceneRight(w,h){
+  ctx.fillStyle = '#071a2a';
+  ctx.fillRect(60,80, w-120, h-200);
+  const b = bots.jester.stage;
+  drawBotAtLane('right', b, w, h, '🤡');
+}
+
+function drawCamSceneBackstage(w,h){
+  ctx.fillStyle = '#051623';
+  ctx.fillRect(60,80, w-120, h-200);
+  // show all backstage silhouettes
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fillRect(120,120,60,180);
+  ctx.fillRect(w-180,120,60,180);
+  ctx.fillRect((w/2)-30,120,60,180);
+}
+
+/* Render a bot in a given lane based on stage */
+function drawBotAtLane(lane, stageIdx, w,h, emoji){
+  // lanes mapping to x positions
+  const lanes = { left: w*0.22, center: w*0.5, right: w*0.78 };
+  const x = lanes[lane];
+  // y determined by stage (backstage -> near -> door)
+  const yStages = [h*0.28, h*0.42, h*0.58, h*0.72, h*0.8];
+  const y = yStages[Math.min(stageIdx, yStages.length-1)];
+
+  // draw silhouette / emoji
+  ctx.save();
+  ctx.font = `${28 + stageIdx*6}px serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = stageIdx >= 4 ? '#ffb3b3' : 'rgba(255,255,255,0.82)';
+  ctx.fillText(emoji, x, y);
+  ctx.restore();
+}
+
+/* ======== Sound (tiny WebAudio beeps) ======== */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq=440, gain=0.05, duration=0.08){
+  try{
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    g.gain.value = gain;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + duration);
+  }catch(e){}
+}
+
+function playMelody(){
+  const notes = [440, 660, 880, 660, 440];
+  let t = 0;
+  notes.forEach((n, i)=>{
+    setTimeout(()=> playBeep(n, 0.05, 0.18), t);
+    t += 220;
+  });
+}
+
+/* ======== Endgame helpers ======== */
+
+/* Periodically if a bot is at stage 4 and door closed, there's a chance it will bash / de-escalate */
+function smallChecks(){
+  Object.values(bots).forEach(b=>{
+    if(b.stage >= 4){
+      // if door closed, sometimes they retreat
+      if((b.side==='left' && game.leftDoor) || (b.side==='right' && game.rightDoor)){
+        if(Math.random() < 0.45) b.stage = 3; // retreat
+      } else {
+        // if door open they linger and may attack
+        if(Math.random() < 0.15) attackIfAtOffice(b);
+      }
+    }
+  });
+}
+
+/* Periodic small checks */
+setInterval(()=>{ if(game.running) smallChecks(); }, 1400);
+
+/* Start */
+init();
+
+</script>
+</body>
+</html>
