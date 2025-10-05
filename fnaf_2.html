@@ -3,34 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FNAF Ultimate Prototype</title>
+<title>FNAF Ultimate Prototype with Tutorial</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#111; font-family:sans-serif; overflow:hidden; }
 
   /* Office background */
-  #office { position:relative; width:100vw; height:100vh; background:linear-gradient(#222,#111); }
+  #office { position:relative; width:100vw; height:100vh; background:linear-gradient(#222,#111); overflow:hidden; }
 
   /* Desk & monitors */
   .desk { position:absolute; bottom:50px; width:600px; height:150px; background:linear-gradient(to top,#333,#555); box-shadow: inset 0 -5px 10px rgba(0,0,0,0.7); border-radius:5px; left:50%; transform:translateX(-50%); }
-  .monitor { position:absolute; width:120px; height:90px; background:#000; top:-90px; box-shadow:0 0 15px rgba(0,255,0,0.4), inset 0 0 5px #0f0; border-radius:4px; }
+  .monitor { position:absolute; width:120px; height:90px; background:#000; top:-90px; box-shadow:0 0 20px rgba(0,255,0,0.5), inset 0 0 5px #0f0; border-radius:4px; }
   .monitor:nth-child(1){ left:100px; }
   .monitor:nth-child(2){ left:380px; }
 
   /* Doors & LEDs */
-  .door { position:absolute; width:60px; height:150px; background:#111; top:50px; border:2px solid #444; border-radius:4px; cursor:pointer; }
+  .door { position:absolute; width:60px; height:150px; background:#111; top:50px; border:2px solid #444; border-radius:4px; cursor:pointer; transition: 0.3s; }
   .door.left { left:50px; }
   .door.right { right:50px; }
-  .door-led { position:absolute; width:10px; height:10px; border-radius:50%; top:10px; left:25px; background:#f00; box-shadow:0 0 10px #f00; animation: ledGlow 1s infinite alternate; }
+  .door.open { background:#222; }
+  .door-led { position:absolute; width:10px; height:10px; border-radius:50%; top:10px; left:25px; background:#f00; box-shadow:0 0 15px #f00; animation: ledGlow 1s infinite alternate; }
   @keyframes ledGlow { 0% { opacity:0.3; } 100% { opacity:1; } }
 
   /* Hallway lights */
-  .light { position:absolute; width:30px; height:30px; border-radius:50%; top:10px; background:#555; border:2px solid #333; cursor:pointer; }
+  .light { position:absolute; width:30px; height:30px; border-radius:50%; top:10px; background:#555; border:2px solid #333; cursor:pointer; transition:0.2s; }
+  .light.on { background:#ff0; box-shadow:0 0 15px #ff0; }
   .light.left { left:150px; }
   .light.right { right:150px; }
 
   /* Bots */
-  .bot { position:absolute; width:80px; height:150px; border-radius:10px; bottom:50px; left:50%; transform:translateX(-50%); box-shadow:0 0 20px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1); animation:sway 3s infinite ease-in-out, breathe 2s infinite alternate; }
+  .bot { position:absolute; width:80px; height:150px; border-radius:10px; bottom:50px; left:50%; transform:translateX(-50%); box-shadow:0 0 20px rgba(255,255,255,0.2), inset 0 0 10px rgba(255,255,255,0.1); animation:sway 3s infinite ease-in-out, breathe 2s infinite alternate; transition: left 0.5s; }
   .bot.red { background:linear-gradient(to bottom,#a00,#500); }
   .bot.blue { background:linear-gradient(to bottom,#00a,#005); }
   .bot.green { background:linear-gradient(to bottom,#0a0,#050); }
@@ -40,7 +42,7 @@
 
   /* HUD */
   #hud { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-  #camera-feed { position:absolute; top:20px; right:20px; width:200px; height:150px; background:#000; border:2px solid rgba(255,255,255,0.2); box-shadow:0 0 10px rgba(0,255,0,0.5); pointer-events:auto; }
+  #camera-feed { position:absolute; top:20px; right:20px; width:200px; height:150px; background:#000; border:2px solid rgba(255,255,255,0.2); box-shadow:0 0 15px rgba(0,255,0,0.5); pointer-events:auto; }
   #power-bar { position:absolute; bottom:20px; left:20px; width:200px; height:20px; background:#111; border:1px solid #555; border-radius:4px; overflow:hidden; }
   #power-fill { width:100%; height:100%; background:linear-gradient(90deg,#0f0,#0a0); animation: powerFlow 2s infinite linear; }
   @keyframes powerFlow { 0%{background-position:0 0;} 100%{background-position:200px 0;} }
@@ -51,7 +53,12 @@
 
   /* Flickering light overlay */
   #light-flicker { position:absolute; width:100%; height:100%; background:radial-gradient(circle at 50% 0, rgba(255,255,255,0.2), transparent 80%); animation:flicker 0.2s infinite alternate; pointer-events:none; }
+
   @keyframes flicker { 0%{opacity:0.2;} 50%{opacity:0.4;} 100%{opacity:0.2;} }
+
+  /* Tutorial overlay */
+  #tutorial { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); color:#0f0; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; font-size:24px; z-index:1000; }
+  #tutorial button { margin-top:20px; padding:10px 20px; font-size:20px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -79,6 +86,13 @@
 
   <div id="jumpscare">JUMPSCARE!</div>
   <div id="light-flicker"></div>
+
+  <div id="tutorial">
+    <div>Welcome to your night shift!<br>
+      Click doors to close them and lights to check the hallways.<br>
+      Manage your power carefully. Survive until 6 AM!</div>
+    <button onclick="startGame()">Start Night</button>
+  </div>
 </div>
 
 <script>
@@ -101,17 +115,25 @@
   const powerFill=document.getElementById('power-fill');
   const bots=document.querySelectorAll('.bot');
   const jumpscare=document.getElementById('jumpscare');
+  const tutorial=document.getElementById('tutorial');
+  let gameRunning=false;
+
+  function startGame() {
+    tutorial.style.display='none';
+    gameRunning=true;
+  }
 
   // Door toggle
-  document.querySelector('.door.left').onclick=()=>doors.left=!doors.left;
-  document.querySelector('.door.right').onclick=()=>doors.right=!doors.right;
+  document.querySelector('.door.left').onclick=()=>{ if(!gameRunning) return; doors.left=!doors.left; document.querySelector('.door.left').classList.toggle('open',doors.left); };
+  document.querySelector('.door.right').onclick=()=>{ if(!gameRunning) return; doors.right=!doors.right; document.querySelector('.door.right').classList.toggle('open',doors.right); };
 
   // Lights toggle drains power
-  document.querySelector('.light.left').onclick=()=>power-=1;
-  document.querySelector('.light.right').onclick=()=>power-=1;
+  document.querySelector('.light.left').onclick=function(){ if(!gameRunning) return; this.classList.toggle('on'); power-=1; };
+  document.querySelector('.light.right').onclick=function(){ if(!gameRunning) return; this.classList.toggle('on'); power-=1; };
 
   // Power drain
   setInterval(()=>{
+    if(!gameRunning) return;
     power-=0.1+(doors.left?0.5:0)+(doors.right?0.5:0);
     if(power<0) power=0;
     powerFill.style.width=power+'%';
@@ -120,6 +142,7 @@
 
   // Animatronic AI
   setInterval(()=>{
+    if(!gameRunning) return;
     bots.forEach(bot=>{
       let left=parseFloat(bot.style.left||'50');
       if(Math.random()<0.02) left+=Math.random()>0.5?5:-5;
